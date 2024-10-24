@@ -4,7 +4,7 @@ import { sendDiscordNotification } from "@/services/discord";
 const router = express.Router();
 
 // @ts-ignore
-router.post("/callback/twitch", async (req: Request, res: Response) => {
+router.post("/twitch", async (req: Request, res: Response) => {
   if (req.body.subscription && req.body.challenge) {
     const { challenge } = req.body;
     return res.status(200).send(challenge);

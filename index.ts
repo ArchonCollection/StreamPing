@@ -27,7 +27,7 @@ app.listen(PORT, () => {
 });
 
 // Create the Discord client
-const client = new Client({
+export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,

@@ -21,7 +21,8 @@ export interface TwitchUser {
 export async function handleTwitchSubscription(
   guildId: string,
   channelId: string,
-  channelName: string
+  channelName: string,
+  roleId?: string
 ) {
   let discordServer = await db.discordServer.upsert({
     where: { id: guildId },
@@ -90,6 +91,7 @@ export async function handleTwitchSubscription(
     data: {
       serverId: discordServer.id,
       discordChannelId: channelId,
+      discordRoleId: roleId,
       platform: "TWITCH",
       channelId: twitchResponse.user.id,
       channelName: twitchResponse.user.display_name,

@@ -192,7 +192,27 @@ export async function subscribeToTwitchEventSub(
   return { error: false, data };
 }
 
-// TODO: export async function unsubscribeFromTwitchEventSub
+export async function unsubscribeFromTwitchEventSub(subscriptionId: string) {
+  const token = await getTwitchAccessToken();
+
+  const response = await fetch(
+    `https://api.twitch.tv/helix/eventsub/subscriptions?id=${subscriptionId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Client-ID": config.twitchClientId,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    return { error: true, message: (error as any).message };
+  }
+
+  return { error: false, message: "Subscription successfully removed" };
+}
 
 export async function searchTwitchUsers(query: string) {
   const token = await getTwitchAccessToken();

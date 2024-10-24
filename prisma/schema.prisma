@@ -18,6 +18,7 @@ model Subscription {
   id               String         @id @default(cuid())
   serverId  String
   discordChannelId String
+  discordRoleId    String?
   discordServer    DiscordServer  @relation(fields: [serverId], references: [id])
   platform         Platform
   channelId        String

@@ -56,6 +56,7 @@ export default {
       const name = interaction.options.getString("name");
       const guildId = interaction.guildId;
       const channel = interaction.options.getChannel("channel");
+      const role = interaction.options.getRole("mention");
 
       if (!platform || !name) {
         await interaction.editReply("Please provide both platform and name");
@@ -77,7 +78,8 @@ export default {
           const response = await handleTwitchSubscription(
             guildId,
             channel.id,
-            name
+            name,
+            role?.id
           );
           if ((response.error && response.message) || !response.data) {
             await interaction.editReply(response.message);
