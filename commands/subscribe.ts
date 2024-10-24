@@ -4,6 +4,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
   EmbedBuilder,
+  ChannelType,
 } from "discord.js";
 
 export default {
@@ -31,6 +32,20 @@ export default {
         .setName("name")
         .setDescription("The name of the channel")
         .setRequired(true)
+        .setAutocomplete(true)
+    )
+    .addChannelOption((option) =>
+      option
+        .setName("channel")
+        .setDescription("The discord channel where notifications will be sent")
+        .setRequired(true)
+        .addChannelTypes(ChannelType.GuildText)
+    )
+    .addRoleOption((option) =>
+      option
+        .setName("mention")
+        .setDescription("The role to mention when triggers")
+        .setRequired(false)
     ),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
@@ -38,6 +53,7 @@ export default {
       const platform = interaction.options.getString("platform");
       const name = interaction.options.getString("name");
       const guildId = interaction.guildId;
+      const channel = interaction.options.getChannel("channel");
 
       if (!platform || !name) {
         await interaction.editReply("Please provide both platform and name");
@@ -49,9 +65,18 @@ export default {
         return;
       }
 
+      if (!channel) {
+        await interaction.editReply("Please provide a channel");
+        return;
+      }
+
       switch (platform) {
         case "twitch":
-          const response = await handleTwitchSubscription(guildId, name);
+          const response = await handleTwitchSubscription(
+            guildId,
+            channel.id,
+            name
+          );
           if ((response.error && response.message) || !response.data) {
             await interaction.editReply(response.message);
           } else {
@@ -60,7 +85,7 @@ export default {
               .setTitle(`Subscribed to ${response.data?.display_name}`)
               .setThumbnail(response.data.profile_image_url)
               .setURL(`https://www.twitch.tv/${response.data?.login}`)
-              .setFooter({ text: "Twitch" })
+              .setFooter({ text: "Platform: Twitch" })
               .setDescription(response.data?.description || "No description");
 
             await interaction.editReply({ embeds: [embed] });

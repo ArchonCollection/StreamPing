@@ -1,4 +1,8 @@
-import { getChannelInfoByName } from "@/services/twitch";
+import {
+  getChannelInfoByName,
+  subscribeToTwitchEventSub,
+} from "@/services/twitch";
+import config from "@/utils/config";
 import { db } from "@/utils/db";
 
 interface TwitchUser {
@@ -16,6 +20,7 @@ interface TwitchUser {
 
 export async function handleTwitchSubscription(
   guildId: string,
+  channelId: string,
   channelName: string
 ) {
   let discordServer = await db.discordServer.upsert({
@@ -65,9 +70,22 @@ export async function handleTwitchSubscription(
     };
   }
 
+  const eventSubResponse = await subscribeToTwitchEventSub(
+    twitchResponse.user.id,
+    `${config.ngrokUrl}/callback/twitch`
+  );
+
+  if (eventSubResponse.error) {
+    return {
+      error: true,
+      message: "Failed to subscribe to Twitch events.",
+    };
+  }
+
   await db.subscription.create({
     data: {
       serverId: discordServer.id,
+      discordChannelId: channelId,
       platform: "TWITCH",
       channelId: twitchResponse.user.id,
       channelName: twitchResponse.user.display_name,

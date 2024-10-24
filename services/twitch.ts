@@ -83,3 +83,43 @@ export async function getChannelInfoByName(channelName: string) {
     };
   }
 }
+
+export async function subscribeToTwitchEventSub(
+  broadcasterId: string,
+  callbackUrl: string
+) {
+  const token = await getTwitchAccessToken();
+
+  const response = await fetch(
+    `https://api.twitch.tv/helix/eventsub/subscriptions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Client-ID": config.twitchClientId,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "stream.online",
+        version: "1",
+        condition: {
+          broadcaster_user_id: broadcasterId,
+        },
+        transport: {
+          method: "webhook",
+          callback: callbackUrl,
+          secret: config.twitchWebhookSecret,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    logger.error(`Twitch EventSub subscription failed: ${error}`);
+    return { error: true, message: (error as any).message };
+  }
+
+  const data = await response.json();
+  return { error: false, data };
+}
