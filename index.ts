@@ -60,24 +60,31 @@ const commandFiles = fs
   .readdirSync(path.join(__dirname, "commands"))
   .filter((file) => file.endsWith(".ts"));
 
-for (const file of commandFiles) {
-  const command = require(path.join(__dirname, "commands", file));
-  commands.set(command.data.name, command);
-}
-
-// Dynamically load event handlers
-const eventFiles = fs
-  .readdirSync(path.join(__dirname, "events"))
-  .filter((file) => file.endsWith(".ts"));
-
-for (const file of eventFiles) {
-  const event = require(path.join(__dirname, "events", file));
-  if (event.once) {
-    client.once(event.name, (...args) => event.execute(...args, client));
-  } else {
-    client.on(event.name, (...args) => event.execute(...args, client));
+// Collect promises for loading commands
+const commandPromises = commandFiles.map(async (file) => {
+  try {
+    const command = await import(`./commands/${file.replace(".ts", "")}`);
+    if (command.default && command.default.data && command.default.data.name) {
+      return [command.default.data.name, command.default];
+    } else {
+      logger.error(`Command ${file} is missing required properties.`);
+      return null;
+    }
+  } catch (error) {
+    logger.error(`Failed to load command ${file}: ${error}`);
+    return null;
   }
-}
+});
+
+const loadedCommands = await Promise.all(commandPromises);
+
+loadedCommands.forEach((command) => {
+  if (command) {
+    commands.set(command[0], command[1]);
+  } else {
+    logger.error(`Failed to load a command due to previous errors.`);
+  }
+});
 
 // Register commands with Discord API
 async function registerCommands() {
@@ -97,19 +104,34 @@ async function registerCommands() {
 
 // Handle interactions
 client.on(Events.InteractionCreate, async (interaction: any) => {
-  if (!interaction.isCommand()) return;
-
   const command = commands.get(interaction.commandName);
-  if (!command) return;
+  if (interaction.isCommand()) {
+    if (!command) return;
 
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    logger.error(`Error executing command: ${interaction.commandName}`, error);
-    await interaction.reply({
-      content: "There was an error executing that command.",
-      ephemeral: true,
-    });
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      logger.error(
+        `Error executing command: ${interaction.commandName}`,
+        error
+      );
+      await interaction.reply({
+        content: "There was an error executing that command.",
+        ephemeral: true,
+      });
+    }
+  } else if (interaction.isAutocomplete()) {
+    const command = commands.get(interaction.commandName);
+    if (command && command.autocomplete) {
+      try {
+        await command.autocomplete(interaction);
+      } catch (error) {
+        logger.error(
+          `Error handling autocomplete for command: ${interaction.commandName}`,
+          error
+        );
+      }
+    }
   }
 });
 

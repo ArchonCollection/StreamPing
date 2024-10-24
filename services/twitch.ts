@@ -36,23 +36,23 @@ async function getTwitchAccessToken(): Promise<string> {
   twitchAccessToken = data.access_token;
   tokenExpiry = Date.now() + data.expires_in * 1000;
 
-  logger.info("Twitch Access Token obtained");
+  logger.info("Twitch Access Token Refreshed");
   return twitchAccessToken;
 }
 
 export async function getChannelInfoByName(channelName: string) {
   try {
     const token = await getTwitchAccessToken();
-    const response = await fetch("https://api.twitch.tv/helix/users", {
-      method: "GET",
-      headers: {
-        "Client-ID": config.twitchClientId,
-        Authorization: `Bearer ${token}`,
-      },
-      body: new URLSearchParams({
-        login: channelName,
-      }),
-    });
+    const response = await fetch(
+      `https://api.twitch.tv/helix/users?login=${channelName}`,
+      {
+        method: "GET",
+        headers: {
+          "Client-ID": config.twitchClientId,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       return {

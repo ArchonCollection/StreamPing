@@ -19,9 +19,9 @@ export async function handleTwitchSubscription(
   channelName: string
 ) {
   let discordServer = await db.discordServer.upsert({
-    where: { discordServerId: guildId },
+    where: { id: guildId },
     update: {},
-    create: { discordServerId: guildId },
+    create: { id: guildId },
     include: { subscriptions: true },
   });
 
@@ -67,9 +67,10 @@ export async function handleTwitchSubscription(
 
   await db.subscription.create({
     data: {
-      discordServerId: discordServer.id,
+      serverId: discordServer.id,
       platform: "TWITCH",
       channelId: twitchResponse.user.id,
+      channelName: twitchResponse.user.display_name,
     },
   });
 

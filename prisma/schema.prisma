@@ -8,8 +8,7 @@ datasource db {
 }
 
 model DiscordServer {
-  id              String          @id @default(cuid())
-  discordServerId String          @unique
+  id String          @id
   subscriptions   Subscription[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -17,12 +16,15 @@ model DiscordServer {
 
 model Subscription {
   id               String         @id @default(cuid())
-  discordServerId  String
-  discordServer    DiscordServer  @relation(fields: [discordServerId], references: [id])
+  serverId  String
+  discordServer    DiscordServer  @relation(fields: [serverId], references: [id])
   platform         Platform
   channelId        String
+  channelName      String
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+
+  @@unique([serverId, channelId])
 }
 
 enum Platform {

@@ -1,22 +1,30 @@
 import { handleTwitchSubscription } from "@/handlers/twitch";
 import logger from "@/utils/logger";
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import {
+  ChatInputCommandInteraction,
+  SlashCommandBuilder,
+  EmbedBuilder,
+} from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("subscribe")
     .setDescription("Subscribe to a channel")
     .addStringOption((option) =>
-      option.setName("platform").setRequired(true).addChoices(
-        {
-          name: "Twitch",
-          value: "twitch",
-        },
-        {
-          name: "Youtube",
-          value: "youtube",
-        }
-      )
+      option
+        .setName("platform")
+        .setDescription("The platform to subscribe to")
+        .setRequired(true)
+        .addChoices([
+          {
+            name: "Twitch",
+            value: "twitch",
+          },
+          {
+            name: "Youtube",
+            value: "youtube",
+          },
+        ])
     )
     .addStringOption((option) =>
       option
@@ -44,13 +52,18 @@ export default {
       switch (platform) {
         case "twitch":
           const response = await handleTwitchSubscription(guildId, name);
-          if (response.error && response.message) {
+          if ((response.error && response.message) || !response.data) {
             await interaction.editReply(response.message);
           } else {
-            // TODO: Add Embed message
-            await interaction.editReply(
-              response.data ? "Subscribed" : "User not found"
-            );
+            const embed = new EmbedBuilder()
+              .setColor(0x0099ff)
+              .setTitle(`Subscribed to ${response.data?.display_name}`)
+              .setThumbnail(response.data.profile_image_url)
+              .setURL(`https://www.twitch.tv/${response.data?.login}`)
+              .setFooter({ text: "Twitch" })
+              .setDescription(response.data?.description || "No description");
+
+            await interaction.editReply({ embeds: [embed] });
           }
           break;
         case "youtube":
@@ -61,6 +74,7 @@ export default {
           );
       }
     } catch (error) {
+      await interaction.editReply("An error occurred: ```" + error + "```");
       logger.error(`Failed to subscribe to channel ${error}`);
     }
   },
