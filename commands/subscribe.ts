@@ -128,7 +128,11 @@ export default {
 
         await interaction.respond(
           (response.data as TwitchUser[]).map((user) => ({
-            name: `${user.display_name}: ${user.description}`,
+            name: user.description
+              ? user.description.length > 40
+                ? `${user.display_name}: ${user.description.substring(0, 37)}...`
+                : `${user.display_name}: ${user.description}`
+              : `${user.display_name}: No description`,
             value: user.login,
           }))
         );

@@ -76,10 +76,14 @@ export async function handleTwitchSubscription(
   );
 
   if (eventSubResponse.error) {
-    return {
-      error: true,
-      message: "Failed to subscribe to Twitch events.",
-    };
+    if (eventSubResponse.error) {
+      if (!eventSubResponse.message?.includes("subscription already exists")) {
+        return {
+          error: true,
+          message: `Failed to subscribe to Twitch events: ${eventSubResponse.message}.`,
+        };
+      }
+    }
   }
 
   await db.subscription.create({

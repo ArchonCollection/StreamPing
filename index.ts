@@ -13,16 +13,17 @@ import logger from "@/utils/logger";
 import fs from "fs";
 import path from "path";
 import callbackRoutes from "@/routes/callback";
+import { getTwitchAccessToken } from "./services/twitch";
 
 const app = express();
-const PORT = 3000;
+const PORT = 3005;
 
 app.use(express.json());
 
 app.use("/callback", callbackRoutes);
 
 app.listen(PORT, () => {
-  logger.info(`Callback server running on port ${PORT}`);
+  logger.info(`Callback Server Started on :${PORT}`);
 });
 
 // Create the Discord client
@@ -54,6 +55,7 @@ client.once(Events.ClientReady, async () => {
 
 // Collection to store commands
 const commands = new Collection<string, any>();
+const commandUsage = new Map<string, { count: number; timestamp: number }>();
 
 // Dynamically load commands
 const commandFiles = fs
@@ -96,7 +98,7 @@ async function registerCommands() {
     await rest.put(Routes.applicationCommands(config.clientId || ""), {
       body: commandJSON,
     });
-    logger.info("Commands registered successfully");
+    logger.info(`Loaded ${commandJSON.length} commands`);
   } catch (error) {
     logger.error("Error registering commands with Discord API");
   }
@@ -106,7 +108,25 @@ async function registerCommands() {
 client.on(Events.InteractionCreate, async (interaction: any) => {
   const command = commands.get(interaction.commandName);
   if (interaction.isCommand()) {
-    if (!command) return;
+    const guildId = interaction.guildId;
+    const now = Date.now();
+    const usageData = commandUsage.get(guildId) || { count: 0, timestamp: now };
+
+    if (now - usageData.timestamp > 5000) {
+      commandUsage.set(guildId, { count: 1, timestamp: now });
+    } else {
+      if (usageData.count < 5) {
+        usageData.count++;
+        commandUsage.set(guildId, usageData);
+      } else {
+        await interaction.reply({
+          content:
+            "You are sending commands too quickly! Please wait a moment.",
+          ephemeral: true,
+        });
+        return;
+      }
+    }
 
     try {
       await command.execute(interaction);
@@ -127,13 +147,15 @@ client.on(Events.InteractionCreate, async (interaction: any) => {
         await command.autocomplete(interaction);
       } catch (error) {
         logger.error(
-          `Error handling autocomplete for command: ${interaction.commandName}`,
-          error
+          `Error handling autocomplete for command: ${interaction.commandName} ${error}`
         );
       }
     }
   }
 });
+
+// Init Handlers
+await getTwitchAccessToken();
 
 client.login(config.botToken).catch(() => {
   logger.error("Failed to login to Discord");

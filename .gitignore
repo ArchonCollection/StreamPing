@@ -130,3 +130,4 @@ dist
 .pnp.*
 
 logs/
+twitch_token.json

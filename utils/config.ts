@@ -38,7 +38,7 @@ const config = {
   botToken: process.env.DISCORD_BOT_TOKEN,
   twitchClientId: process.env.TWITCH_CLIENT_ID || "",
   twitchClientSecret: process.env.TWITCH_CLIENT_SECRET || "",
-  twitchWebhookSecret: process.env.TWITCH_WEBHOOK_SECRET || "SECRET",
+  twitchWebhookSecret: process.env.TWITCH_WEBHOOK_SECRET || "TWITCHSECRET",
   ngrokUrl,
 };
 

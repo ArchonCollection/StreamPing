@@ -1,13 +1,43 @@
 import fetch from "node-fetch";
 import config from "@/utils/config";
 import logger from "@/utils/logger";
+import fs from "fs";
+import path from "path";
+import { db } from "@/utils/db";
 
 let twitchAccessToken: string | null = null;
 let tokenExpiry: number | null = null;
 
-async function getTwitchAccessToken(): Promise<string> {
-  if (twitchAccessToken && tokenExpiry && Date.now() < tokenExpiry) {
-    return twitchAccessToken;
+const tokenFilePath = path.join(__dirname, "twitch_token.json");
+function loadTokenFromFile() {
+  if (fs.existsSync(tokenFilePath)) {
+    const data = fs.readFileSync(tokenFilePath, "utf-8");
+    const { accessToken, expiry } = JSON.parse(data);
+    twitchAccessToken = accessToken;
+    tokenExpiry = expiry;
+    logger.info("Loaded Twitch Tokens from config.");
+  }
+}
+
+loadTokenFromFile();
+
+function saveTokenToFile(accessToken: string, expiry: number) {
+  const data = JSON.stringify({ accessToken, expiry });
+  fs.writeFileSync(tokenFilePath, data, "utf-8");
+  logger.info("Twitch token saved to file.");
+}
+
+function isTokenValid() {
+  return twitchAccessToken && tokenExpiry && Date.now() < tokenExpiry;
+}
+
+export async function getTwitchAccessToken(): Promise<string> {
+  if (!twitchAccessToken || !tokenExpiry) {
+    loadTokenFromFile();
+  }
+
+  if (isTokenValid()) {
+    return twitchAccessToken!;
   }
 
   const response = await fetch(`https://id.twitch.tv/oauth2/token`, {
@@ -23,7 +53,8 @@ async function getTwitchAccessToken(): Promise<string> {
   });
 
   if (!response.ok) {
-    logger.info(`Failed to get Twitch token: ${response.statusText}`);
+    logger.error(`Failed to get Twitch token: ${response.statusText}`);
+    throw new Error("Failed to get Twitch access token.");
   }
 
   const responseData = await response.json();
@@ -36,8 +67,46 @@ async function getTwitchAccessToken(): Promise<string> {
   twitchAccessToken = data.access_token;
   tokenExpiry = Date.now() + data.expires_in * 1000;
 
+  saveTokenToFile(twitchAccessToken, tokenExpiry);
+  try {
+    await resubscribeToAllTwitchEvents();
+  } catch (error) {
+    logger.error(`Failed to resubscribe to existing Twitch events: ${error}`);
+  }
+
   logger.info("Twitch Access Token Refreshed");
   return twitchAccessToken;
+}
+
+async function resubscribeToAllTwitchEvents() {
+  try {
+    const twitchSubscriptions = await db.subscription.findMany({
+      where: { platform: "TWITCH" },
+    });
+
+    const uniqueChannelIds = new Set(
+      twitchSubscriptions.map((subscription) => subscription.channelId)
+    );
+
+    const subscriptionPromises = Array.from(uniqueChannelIds).map(
+      async (channelId) => {
+        const callbackUrl = `${config.ngrokUrl}/callback/twitch`;
+
+        const result = await subscribeToTwitchEventSub(channelId, callbackUrl);
+
+        if (result.error) {
+          logger.warn(
+            `Failed to resubscribe to channel ${channelId}: ${result.message}`
+          );
+        }
+      }
+    );
+
+    await Promise.all(subscriptionPromises);
+    logger.info("Twitch subscriptions processed.");
+  } catch (error) {
+    logger.error(`Error resubscribing to Twitch events: ${error}`);
+  }
 }
 
 export async function getChannelInfoByName(channelName: string) {
@@ -116,7 +185,6 @@ export async function subscribeToTwitchEventSub(
 
   if (!response.ok) {
     const error = await response.json();
-    logger.error(`Twitch EventSub subscription failed: ${error}`);
     return { error: true, message: (error as any).message };
   }
 

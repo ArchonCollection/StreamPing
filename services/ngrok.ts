@@ -34,7 +34,7 @@ export async function getReservedDomains() {
 export async function createStaticNgrokTunnel(domain: string) {
   try {
     const tunnel = await ngrok.connect({
-      addr: 3000,
+      addr: 3005,
       proto: "http",
       hostname: domain,
     });

@@ -38,6 +38,15 @@ export default {
         `You have successfully unsubscribed from channel ${channel.channelName}`
       );
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "PrismaClientKnownRequestError"
+      ) {
+        await interaction.editReply(
+          "The channel you are trying to unsubscribe from does not exist in the database"
+        );
+        return;
+      }
       await interaction.editReply("An error occurred: ```" + error + "```");
       logger.error(`Failed to unsubscribe from channel ${error}`);
     }
