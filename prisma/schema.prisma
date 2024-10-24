@@ -6,3 +6,26 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model DiscordServer {
+  id              String          @id @default(cuid())
+  discordServerId String          @unique
+  subscriptions   Subscription[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Subscription {
+  id               String         @id @default(cuid())
+  discordServerId  String
+  discordServer    DiscordServer  @relation(fields: [discordServerId], references: [id])
+  platform         Platform
+  channelId        String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+enum Platform {
+  TWITCH
+  YOUTUBE
+}

@@ -1,3 +1,4 @@
+import express from "express";
 import {
   ActivityType,
   Client,
@@ -11,6 +12,18 @@ import config from "@/utils/config";
 import logger from "@/utils/logger";
 import fs from "fs";
 import path from "path";
+import callbackRoutes from "@/routes/callback";
+
+const app = express();
+const PORT = 3000;
+
+app.use(express.json());
+
+app.use("/callback", callbackRoutes);
+
+app.listen(PORT, () => {
+  logger.info(`Callback server running on port ${PORT}`);
+});
 
 // Create the Discord client
 const client = new Client({
