@@ -123,3 +123,29 @@ export async function subscribeToTwitchEventSub(
   const data = await response.json();
   return { error: false, data };
 }
+
+// TODO: export async function unsubscribeFromTwitchEventSub
+
+export async function searchTwitchUsers(query: string) {
+  const token = await getTwitchAccessToken();
+  const response = await fetch(
+    `https://api.twitch.tv/helix/users?login=${query}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Client-ID": config.twitchClientId,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    logger.error(`Twitch search failed: ${error}`);
+    return { error: true, message: (error as any).message };
+  }
+
+  const data = await response.json();
+  return { error: false, data: (data as any).data };
+}

@@ -1,5 +1,7 @@
 import { handleTwitchSubscription } from "@/handlers/twitch";
+import { searchTwitchUsers } from "@/services/twitch";
 import logger from "@/utils/logger";
+import { type TwitchUser } from "@/handlers/twitch";
 import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
@@ -101,6 +103,41 @@ export default {
     } catch (error) {
       await interaction.editReply("An error occurred: ```" + error + "```");
       logger.error(`Failed to subscribe to channel ${error}`);
+    }
+  },
+  async autocomplete(interaction: any): Promise<void> {
+    if (!interaction.isAutocomplete()) return;
+    const focusedOption = interaction.options.getFocused();
+    const query = focusedOption.replace(/\s/g, "").toLowerCase();
+    try {
+      // TODO: handle platform based
+      if (!query) {
+        await interaction.respond([]);
+        return;
+      }
+      const response = await searchTwitchUsers(query);
+      if (response.error) {
+        await interaction.respond([
+          { name: "Error fetching streamers", value: "error" },
+        ]);
+      } else {
+        if (!response.data) {
+          await interaction.respond([]);
+          return;
+        }
+
+        await interaction.respond(
+          (response.data as TwitchUser[]).map((user) => ({
+            name: `${user.display_name}: ${user.description}`,
+            value: user.login,
+          }))
+        );
+      }
+    } catch (error) {
+      await interaction.respond([
+        { name: "Error fetching streamers", value: "error" },
+      ]);
+      logger.error(`Failed to fetch streamers: ${error}`);
     }
   },
 };

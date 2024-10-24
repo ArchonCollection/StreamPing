@@ -5,7 +5,7 @@ import {
 import config from "@/utils/config";
 import { db } from "@/utils/db";
 
-interface TwitchUser {
+export interface TwitchUser {
   id: string;
   login: string;
   display_name: string;
