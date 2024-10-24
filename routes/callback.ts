@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from "express";
 import { sendDiscordNotification } from "@/services/discord";
+import escape from "escape-html";
 
 const router = express.Router();
 
@@ -7,7 +8,7 @@ const router = express.Router();
 router.post("/twitch", async (req: Request, res: Response) => {
   if (req.body.subscription && req.body.challenge) {
     const { challenge } = req.body;
-    return res.status(200).send(challenge);
+    return res.status(200).send(escape(challenge));
   }
 
   if (
